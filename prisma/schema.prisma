@@ -1,0 +1,139 @@
+﻿generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum TaskStatus {
+  ACTIVE
+  COMPLETED
+}
+
+enum ReminderFrequency {
+  ONCE
+  DAILY
+  WEEKLY
+}
+
+model User {
+  id                   String           @id @default(cuid())
+  name                 String
+  handle               String
+  email                String           @unique
+  passwordHash         String
+  plan                 String
+  notificationsEnabled Boolean          @default(true)
+  dailyGoalMinutes     Int              @default(240)
+  language             String           @default("pt-BR")
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  tasks          Task[]
+  projects       Project[]
+  reminders      Reminder[]
+  notifications  Notification[]
+  timerSettings  TimerSettings?
+  focusSessions  FocusSession[]
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id])
+  tasks Task[]
+
+  @@index([userId])
+}
+
+model Task {
+  id               String     @id @default(cuid())
+  userId           String
+  title            String
+  icon             String?
+  durationMinutes  Int?
+  targetSessions   Int        @default(1)
+  completedSessions Int       @default(0)
+  targetMinutes    Int        @default(25)
+  completedMinutes Int        @default(0)
+  status           TaskStatus @default(ACTIVE)
+  projectId        String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id])
+  project Project? @relation(fields: [projectId], references: [id])
+  focusSessions FocusSession[]
+
+  @@index([userId])
+  @@index([projectId])
+}
+
+model Reminder {
+  id        String            @id @default(cuid())
+  userId    String
+  time      String
+  frequency ReminderFrequency
+  enabled   Boolean           @default(true)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  icon      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model TimerSettings {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  focusDurationMinutes Int      @default(25)
+  shortBreakMinutes    Int      @default(5)
+  longBreakMinutes     Int      @default(15)
+  strictMode           Boolean  @default(false)
+  doNotDisturb         Boolean  @default(false)
+  alwaysOnDisplay      Boolean  @default(false)
+  autoBreaks           Boolean  @default(false)
+  repeatCycles         Boolean  @default(false)
+  speed2x              Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model FocusSession {
+  id              String   @id @default(cuid())
+  userId          String
+  taskId          String?
+  durationSeconds Int
+  startedAt       DateTime @default(now())
+  endedAt         DateTime?
+  strictMode      Boolean  @default(false)
+  completed       Boolean  @default(true)
+
+  user User @relation(fields: [userId], references: [id])
+  task Task? @relation(fields: [taskId], references: [id])
+
+  @@index([userId])
+  @@index([taskId])
+}
