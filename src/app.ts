@@ -1,6 +1,7 @@
-﻿import express from "express";
+import express from "express";
 import cors from "cors";
 import type { Request, Response, NextFunction } from "express";
+import { ZodError } from "zod";
 import { config } from "./lib/config.js";
 import { authRouter } from "./routes/auth.js";
 import { meRouter } from "./routes/me.js";
@@ -39,6 +40,11 @@ export function createApp() {
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     console.error(err);
+    if (err instanceof ZodError) {
+      const first = err.errors[0];
+      const msg = first?.message ?? "Dados inválidos";
+      return res.status(400).json({ error: msg });
+    }
     res.status(500).json({ error: "Server error" });
   });
 
