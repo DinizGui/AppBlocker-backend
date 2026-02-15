@@ -1,4 +1,4 @@
-﻿import { Router } from "express";
+import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { asyncHandler } from "../lib/async.js";
 
@@ -17,7 +17,7 @@ router.get(
       select: { durationSeconds: true, endedAt: true }
     });
 
-    const totalSeconds = sessions.reduce((sum, s) => sum + s.durationSeconds, 0);
+    const totalSeconds = sessions.reduce((sum: number, s: { durationSeconds: number; endedAt: Date | null }) => sum + s.durationSeconds, 0);
     const totalFocusMinutes = Math.round(totalSeconds / 60);
 
     const daySet = new Set<string>();
@@ -37,7 +37,7 @@ router.get(
     }
 
     const todayKey = toDateKey(new Date());
-    const sessionsToday = sessions.filter((s) => s.endedAt && toDateKey(s.endedAt) === todayKey).length;
+    const sessionsToday = sessions.filter((s: { durationSeconds: number; endedAt: Date | null }) => s.endedAt && toDateKey(s.endedAt) === todayKey).length;
 
     res.json({
       totalFocusMinutes,
