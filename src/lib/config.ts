@@ -1,4 +1,4 @@
-﻿import "dotenv/config";
+import "dotenv/config";
 
 function numberFromEnv(name: string, fallback: number) {
   const raw = process.env[name];
@@ -10,5 +10,6 @@ function numberFromEnv(name: string, fallback: number) {
 export const config = {
   port: numberFromEnv("PORT", 4000),
   jwtSecret: process.env.JWT_SECRET || "dev-secret",
-  corsOrigin: process.env.CORS_ORIGIN || "*"
+  corsOrigin: process.env.CORS_ORIGIN || "*",
+  googleClientId: process.env.GOOGLE_CLIENT_ID || "",
 };

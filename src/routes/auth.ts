@@ -1,9 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import { OAuth2Client } from "google-auth-library";
 import { prisma } from "../lib/prisma.js";
 import { createToken } from "../lib/auth.js";
 import { asyncHandler } from "../lib/async.js";
+import { config } from "../lib/config.js";
 
 const router = Router();
 
@@ -24,6 +26,7 @@ const userSelect = {
   handle: true,
   email: true,
   plan: true,
+  photo: true,
   notificationsEnabled: true,
   dailyGoalMinutes: true,
   language: true,
@@ -90,7 +93,7 @@ router.post(
     const email = data.email.trim().toLowerCase();
 
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
+    if (!user || !user.passwordHash) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
@@ -106,6 +109,87 @@ router.post(
     });
 
     res.json({ token, user: safeUser });
+  })
+);
+
+const googleAuthSchema = z.object({
+  idToken: z.string().min(1, "idToken é obrigatório"),
+});
+
+router.post(
+  "/google",
+  asyncHandler(async (req, res) => {
+    const { idToken } = googleAuthSchema.parse(req.body);
+
+    if (!config.googleClientId) {
+      return res.status(503).json({ error: "Google login not configured" });
+    }
+
+    const client = new OAuth2Client(config.googleClientId);
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: config.googleClientId,
+    });
+    const payload = ticket.getPayload();
+    if (!payload || !payload.sub || !payload.email) {
+      return res.status(400).json({ error: "Invalid Google token" });
+    }
+
+    const googleId = payload.sub;
+    const email = payload.email.trim().toLowerCase();
+    const name = payload.name?.trim() || payload.email.split("@")[0] || "Usuário";
+    const picture = payload.picture ?? null;
+
+    const handle = makeHandle(name, email);
+
+    const existing = await prisma.user.findFirst({
+      where: { OR: [{ googleId }, { email }] },
+    });
+
+    let user: { id: string; name: string; handle: string; email: string; plan: string; photo: string | null; notificationsEnabled: boolean; dailyGoalMinutes: number; language: string; createdAt: Date; updatedAt: Date };
+    if (existing) {
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: { googleId, name, photo: picture, updatedAt: new Date() },
+      });
+      const updated = await prisma.user.findUnique({
+        where: { id: existing.id },
+        select: userSelect,
+      });
+      if (!updated) throw new Error("User not found after update");
+      user = updated;
+    } else {
+      const created = await prisma.user.create({
+        data: {
+          email,
+          name,
+          handle,
+          googleId,
+          photo: picture,
+          passwordHash: null,
+          plan: "Premium (Annual)",
+          notificationsEnabled: true,
+          dailyGoalMinutes: 240,
+          language: "pt-BR",
+          timerSettings: { create: {} },
+          projects: {
+            createMany: {
+              data: [
+                { name: "Trabalho" },
+                { name: "Estudos" },
+                { name: "Pessoal" },
+                { name: "Outro" },
+              ],
+            },
+          },
+        },
+        select: userSelect,
+      });
+      user = created;
+    }
+
+    const token = createToken(user.id);
+    res.json({ token, user });
   })
 );
 

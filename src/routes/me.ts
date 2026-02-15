@@ -1,4 +1,4 @@
-﻿import { Router } from "express";
+import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { asyncHandler } from "../lib/async.js";
@@ -21,6 +21,7 @@ const userSelect = {
   handle: true,
   email: true,
   plan: true,
+  photo: true,
   notificationsEnabled: true,
   dailyGoalMinutes: true,
   language: true,

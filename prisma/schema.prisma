@@ -16,9 +16,11 @@ model User {
   handle               String
   language             String         @default("pt-BR")
   notificationsEnabled Boolean        @default(true)
-  passwordHash         String
+  passwordHash         String?        // null for Google-only users
   plan                 String
   updatedAt            DateTime       @updatedAt
+  googleId             String?        @unique // Google sub
+  photo                String?        // profile picture URL
   focusSessions        FocusSession[]
   notifications        Notification[]
   projects             Project[]
