@@ -11,5 +11,5 @@ export const config = {
   port: numberFromEnv("PORT", 4000),
   jwtSecret: process.env.JWT_SECRET || "dev-secret",
   corsOrigin: process.env.CORS_ORIGIN || "*",
-  googleClientId: process.env.GOOGLE_CLIENT_ID || "",
+  googleClientId: process.env.GOOGLE_WEB_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "",
 };
