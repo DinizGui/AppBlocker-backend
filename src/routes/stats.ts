@@ -27,22 +27,12 @@ router.get(
 
     const activeDays = daySet.size;
 
-    let streak = 0;
-    for (let i = 0; i < 365; i++) {
-      const d = new Date();
-      d.setUTCDate(d.getUTCDate() - i);
-      const key = toDateKey(d);
-      if (daySet.has(key)) streak += 1;
-      else break;
-    }
-
     const todayKey = toDateKey(new Date());
     const sessionsToday = sessions.filter((s: { durationSeconds: number; endedAt: Date | null }) => s.endedAt && toDateKey(s.endedAt) === todayKey).length;
 
     res.json({
       totalFocusMinutes,
       activeDays,
-      streak,
       sessionsToday
     });
   })
